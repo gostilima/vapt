@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-display), system-ui, -apple-system, sans-serif;
+  --color-vapt: #093B84;
+  --color-vapt-dark: #05234F;
+  --color-vapt-light: #EBF2FA;
+}
+
+@layer utilities {
+  .logo-double-border {
+    border: 3px solid #093B84;
+    outline: 2px solid white;
+    outline-offset: -3px;
+  }
+}

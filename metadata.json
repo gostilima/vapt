@@ -1,0 +1,6 @@
+{
+  "name": "Vapt",
+  "description": "Transporte inteligente em Balsas e região. Soluções de frete conjunto e calculadora transparente para cargas de todos os tamanhos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
