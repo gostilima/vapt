@@ -51,6 +51,7 @@ export default function RegisterForm({ role, onRegisterComplete, onBack, onGoToL
   ];
 
   const vehicleOptions = [
+    { name: 'Carro de Passeio', cap: '400', vol: '1' },
     { name: 'Fiat Strada (Picape)', cap: '700', vol: '3' },
     { name: 'Caminhão 3/4 (Leve)', cap: '4500', vol: '18' },
     { name: 'Truck (Pesado)', cap: '14000', vol: '45' },
@@ -62,6 +63,8 @@ export default function RegisterForm({ role, onRegisterComplete, onBack, onGoToL
     { id: 'Riachão', label: 'Riachão' },
     { id: 'Carolina', label: 'Carolina' },
     { id: 'Tasso Fragoso', label: 'Tasso Fragoso' },
+    { id: 'São Raimundo das Mangabeiras', label: 'S. R. Mangabeiras' },
+    { id: 'Imperatriz', label: 'Imperatriz' },
   ];
 
   const handleDetectLocation = () => {
@@ -405,6 +408,7 @@ export default function RegisterForm({ role, onRegisterComplete, onBack, onGoToL
                         onChange={(e) => handleVehicleChange(e.target.value)}
                         className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 focus:border-vapt focus:bg-white rounded-xl text-sm focus:outline-none transition-all"
                       >
+                        <option value="Carro de Passeio">Carro de Passeio</option>
                         <option value="Fiat Strada">Fiat Strada (Picape)</option>
                         <option value="Caminhão 3/4">Caminhão 3/4</option>
                         <option value="Truck">Caminhão Truck</option>

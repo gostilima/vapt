@@ -5,9 +5,10 @@ import {
   Truck, ClipboardList, TrendingUp, MapPin, 
   CircleCheck, Hourglass, Calendar, Navigation, 
   RefreshCw, Info, AlertCircle, Plus, ChevronRight, Fuel,
-  ArrowRight
+  ArrowRight, MessageSquare
 } from 'lucide-react';
 import Logo from './Logo';
+import NegotiationChat from './NegotiationChat';
 
 interface DriverDashboardProps {
   userProfile: any;
@@ -37,6 +38,8 @@ interface ProgrammedTravel {
 }
 
 export default function DriverDashboard({ userProfile, onLogout }: DriverDashboardProps) {
+  const [activeChatOfferId, setActiveChatOfferId] = useState<string | null>(null);
+
   const vehicleDetails = userProfile.vehicleDetails || {
     type: 'Caminhão 3/4',
     capacityKg: 4500,
@@ -338,6 +341,8 @@ export default function DriverDashboard({ userProfile, onLogout }: DriverDashboa
                       <option value="Riachão">Riachão</option>
                       <option value="Carolina">Carolina</option>
                       <option value="Tasso Fragoso">Tasso Fragoso</option>
+                      <option value="São Raimundo das Mangabeiras">São Raimundo das Mangabeiras</option>
+                      <option value="Imperatriz">Imperatriz</option>
                     </select>
                   </div>
 
@@ -352,6 +357,8 @@ export default function DriverDashboard({ userProfile, onLogout }: DriverDashboa
                       <option value="Riachão" disabled={travelStart === "Riachão"}>Riachão</option>
                       <option value="Carolina" disabled={travelStart === "Carolina"}>Carolina</option>
                       <option value="Tasso Fragoso" disabled={travelStart === "Tasso Fragoso"}>Tasso Fragoso</option>
+                      <option value="São Raimundo das Mangabeiras" disabled={travelStart === "São Raimundo das Mangabeiras"}>São Raimundo das Mangabeiras</option>
+                      <option value="Imperatriz" disabled={travelStart === "Imperatriz"}>Imperatriz</option>
                     </select>
                   </div>
                 </div>
@@ -522,14 +529,26 @@ export default function DriverDashboard({ userProfile, onLogout }: DriverDashboa
                     </div>
 
                     {/* Action Step trigger button */}
-                    <button
-                      onClick={() => handleAcceptOffer(off.id, off.clientName)}
-                      className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-[0.98] mt-5 cursor-pointer flex items-center justify-center gap-1.5 ${btnColorClass}`}
-                      id={`offer-action-btn-${off.id}`}
-                    >
-                      <span>{btnLabel}</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <div className="flex gap-2 mt-5">
+                      <button
+                        onClick={() => setActiveChatOfferId(off.id)}
+                        className="py-2.5 px-3 bg-blue-50 hover:bg-blue-100 text-vapt hover:text-vapt-dark border border-blue-200 rounded-xl text-xs font-bold transition-all active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1"
+                        title="Conversar com o Cliente"
+                        id={`btn-chat-driver-${off.id}`}
+                      >
+                        <MessageSquare className="w-4 h-4 animate-pulse" />
+                        <span>Chat</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleAcceptOffer(off.id, off.clientName)}
+                        className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-[0.98] cursor-pointer flex items-center justify-center gap-1.5 ${btnColorClass}`}
+                        id={`offer-action-btn-${off.id}`}
+                      >
+                        <span>{btnLabel}</span>
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -537,6 +556,23 @@ export default function DriverDashboard({ userProfile, onLogout }: DriverDashboa
           )}
         </div>
       </main>
+
+      {/* Real-time Negotiation Chat Panel */}
+      {activeChatOfferId && (() => {
+        const activeOff = activeOffers.find(o => o.id === activeChatOfferId);
+        if (!activeOff) return null;
+        return (
+          <NegotiationChat
+            offerId={activeChatOfferId}
+            currentUserRole="driver"
+            currentUserName={userProfile.name}
+            offerPrice={activeOff.price}
+            offerStart={activeOff.start}
+            offerEnd={activeOff.end}
+            onClose={() => setActiveChatOfferId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, Calculator, Package, Truck, Compass, 
   MapPin, CircleCheck, Info, AlertTriangle, RefreshCw, 
-  Check, History, ArrowRight, CornerDownRight, Landmark 
+  Check, History, ArrowRight, CornerDownRight, Landmark,
+  MessageSquare
 } from 'lucide-react';
 import Logo from './Logo';
 import MapComponent, { cities, regionalHighways } from './MapComponent';
+import NegotiationChat from './NegotiationChat';
 
 interface ClientDashboardProps {
   userProfile: any;
@@ -33,6 +35,7 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
   const [endCity, setEndCity] = useState('Carolina');
   const [searchText, setSearchText] = useState('');
   const [freightType, setFreightType] = useState<'exclusive' | 'shared'>('shared');
+  const [activeChatOfferId, setActiveChatOfferId] = useState<string | null>(null);
   
   // Calculator state (user inputs)
   const [weightKg, setWeightKg] = useState<number>(150);
@@ -143,32 +146,109 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
       return 395; // 155 + 140 + 100
     }
 
+    // São Raimundo das Mangabeiras indirect connections
+    if ((from === 'Riachão' && to === 'São Raimundo das Mangabeiras') || (from === 'São Raimundo das Mangabeiras' && to === 'Riachão')) {
+      return 240; // 140 + 100
+    }
+    if ((from === 'Carolina' && to === 'São Raimundo das Mangabeiras') || (from === 'São Raimundo das Mangabeiras' && to === 'Carolina')) {
+      return 340; // 100 + 140 + 100
+    }
+    if ((from === 'Tasso Fragoso' && to === 'São Raimundo das Mangabeiras') || (from === 'São Raimundo das Mangabeiras' && to === 'Tasso Fragoso')) {
+      return 255; // 155 + 100
+    }
+
+    // Imperatriz indirect connections
+    if ((from === 'Riachão' && to === 'Imperatriz') || (from === 'Imperatriz' && to === 'Riachão')) {
+      return 350; // Approximated
+    }
+    if ((from === 'Carolina' && to === 'Imperatriz') || (from === 'Imperatriz' && to === 'Carolina')) {
+      return 250; // Approximated
+    }
+
     return 180; // Reasonable default approximation
   };
 
   const getDistanceAmount = lookupDistance(startCity, endCity);
 
-  // PRICING SYSTEM Formula from item 5 calculated AT RENDER TIME!
-  // Preço Final = Taxa Base + (Peso * Fator Peso) + (Distância * Fator Combustível)
-  const TAXA_BASE = 25.00;
-  const FATOR_PESO = 0.20; // R$ 0.20 per kg
-  const FATOR_COMBUSTIVEL = 1.95; // R$ 1.95 per km
-
-  const pesoPart = weightKg * FATOR_PESO;
-  const combustivelPart = getDistanceAmount * FATOR_COMBUSTIVEL;
-  
-  const subtotal = TAXA_BASE + pesoPart + combustivelPart;
-  const discount = freightType === 'shared' ? subtotal * 0.25 : 0;
-  const calculatedPrice = Math.max(subtotal - discount, 30.00); // minimum freight guarantee of 30 reais
-
-  const breakdown = {
-    taxaBase: TAXA_BASE,
-    pesoCalculo: pesoPart,
-    combustivelCalculo: combustivelPart,
-    subtotal,
-    desconto: discount,
-    finalValue: calculatedPrice
+  // Exact route price bounds checks
+  const isExactRoute = (from: string, to: string, startName: string, endName: string): boolean => {
+    return (from === startName && to === endName) || (from === endName && to === startName);
   };
+
+  const getExactRoutePrice = (from: string, to: string): { min: number, max: number } | null => {
+    if (isExactRoute(from, to, 'Balsas', 'São Raimundo das Mangabeiras')) {
+      return { min: 145.00, max: 170.00 };
+    }
+    if (isExactRoute(from, to, 'Balsas', 'Riachão')) {
+      return { min: 110.00, max: 170.00 };
+    }
+    if (isExactRoute(from, to, 'Balsas', 'Imperatriz')) {
+      return { min: 195.00, max: 230.00 };
+    }
+    return null;
+  };
+
+  const exactPriceInfo = getExactRoutePrice(startCity, endCity);
+
+  let calculatedPrice = 0;
+  let breakdown: any = {};
+
+  if (freightType === 'shared') {
+    // Frete fracionado: R$ 0.75 - R$ 1.20 por kg
+    const baseKgRate = 0.75;
+    const distanceBonus = Math.min((getDistanceAmount / 400) * 0.45, 0.45);
+    const finalKgRate = parseFloat((baseKgRate + distanceBonus).toFixed(2));
+    
+    let subtotal = weightKg * finalKgRate;
+    
+    calculatedPrice = parseFloat(subtotal.toFixed(2));
+    breakdown = {
+      type: 'shared',
+      kgRate: finalKgRate,
+      weight: weightKg,
+      subtotal,
+      finalValue: calculatedPrice,
+      isExactRoute: false
+    };
+  } else {
+    // Frete exclusivo: distance brackets
+    let ratePerKm = 0;
+    let minPrice = 0;
+    let maxPrice = 0;
+
+    if (getDistanceAmount <= 50) {
+      ratePerKm = 3.65;
+      minPrice = 110.00;
+      maxPrice = 180.00;
+    } else if (getDistanceAmount <= 200) {
+      ratePerKm = 3.10;
+      minPrice = 240.00;
+      maxPrice = 460.00;
+    } else {
+      ratePerKm = 2.50;
+      minPrice = 580.00;
+      maxPrice = 1100.00;
+    }
+
+    let subtotal = getDistanceAmount * ratePerKm;
+    subtotal = Math.max(minPrice, Math.min(subtotal, maxPrice));
+
+    if (exactPriceInfo) {
+      subtotal = Math.max(exactPriceInfo.min, Math.min(subtotal, exactPriceInfo.max));
+    }
+
+    calculatedPrice = parseFloat(subtotal.toFixed(2));
+    breakdown = {
+      type: 'exclusive',
+      distance: getDistanceAmount,
+      ratePerKm,
+      minPrice,
+      maxPrice,
+      subtotal,
+      isExactRoute: !!exactPriceInfo,
+      finalValue: calculatedPrice
+    };
+  }
 
   // Handle route click from map
   const handleMapRouteSelection = (start: string, end: string) => {
@@ -374,14 +454,26 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
                         <span>Distância: <strong className="text-gray-800">{req.distance}km</strong></span>
                       </div>
 
-                      <div className="flex items-center gap-1.5" id="req-status">
-                        <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                          req.status === 'Pendente' ? 'bg-amber-500' :
-                          req.status === 'Em Trânsito' ? 'bg-vapt' : 'bg-green-500'
-                        }`} />
-                        <span className="text-[10px] font-bold text-gray-600 uppercase">
-                          {req.status}
-                        </span>
+                      <div className="flex items-center gap-2.5" id="req-status">
+                        <button
+                          onClick={() => setActiveChatOfferId(req.id)}
+                          className="flex items-center gap-1 py-1 px-2.5 bg-[#093B84]/10 hover:bg-[#093B84] text-[#093B84] hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer border border-[#093B84]/20"
+                          title="Abrir Chat de Negociação"
+                          id={`btn-chat-client-${req.id}`}
+                        >
+                          <MessageSquare className="w-3 h-3" />
+                          <span>Negociar</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5">
+                          <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                            req.status === 'Pendente' ? 'bg-amber-500' :
+                            req.status === 'Em Trânsito' ? 'bg-vapt' : 'bg-green-500'
+                          }`} />
+                          <span className="text-[10px] font-bold text-gray-600 uppercase">
+                            {req.status}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -496,6 +588,8 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
                     <option value="Riachão">Riachão</option>
                     <option value="Carolina">Carolina</option>
                     <option value="Tasso Fragoso">Tasso Fragoso</option>
+                    <option value="São Raimundo das Mangabeiras">São Raimundo das Mangabeiras</option>
+                    <option value="Imperatriz">Imperatriz</option>
                   </select>
                 </div>
 
@@ -511,6 +605,8 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
                     <option value="Riachão" disabled={startCity === "Riachão"}>Riachão</option>
                     <option value="Carolina" disabled={startCity === "Carolina"}>Carolina</option>
                     <option value="Tasso Fragoso" disabled={startCity === "Tasso Fragoso"}>Tasso Fragoso</option>
+                    <option value="São Raimundo das Mangabeiras" disabled={startCity === "São Raimundo das Mangabeiras"}>São Raimundo das Mangabeiras</option>
+                    <option value="Imperatriz" disabled={startCity === "Imperatriz"}>Imperatriz</option>
                   </select>
                 </div>
               </div>
@@ -574,8 +670,8 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
               {/* Breakdown formula display strictly obeying PDF Section 5 instructions */}
               <div className="bg-slate-50 border border-gray-200 rounded-xl p-4 text-xs space-y-2.5" id="pricing-breakdown-panel">
                 <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2 border-b border-gray-200 pb-1.5">
-                  <span>Fórmula Transparente</span>
-                  <span className="text-vapt">Cálculo Vapt</span>
+                  <span>Tabela de Preços Vapt</span>
+                  <span className="text-vapt">Cálculo Real</span>
                 </div>
 
                 <div className="flex justify-between">
@@ -583,34 +679,47 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
                   <strong className="text-vapt-dark font-mono">{getDistanceAmount} km</strong>
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Taxa Base de Serviço:</span>
-                  <strong className="text-vapt-dark font-mono">
-                    R$ {breakdown.taxaBase?.toFixed(2)}
-                  </strong>
-                </div>
+                {breakdown.type === 'shared' ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Tipo de Frete:</span>
+                      <strong className="text-green-700 font-extrabold">Fracionado (por kg)</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Peso Estimado:</span>
+                      <strong className="text-vapt-dark font-mono">{breakdown.weight} kg</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Taxa por kg (região):</span>
+                      <strong className="text-vapt-dark font-mono">R$ {breakdown.kgRate?.toFixed(2)} / kg</strong>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Tipo de Frete:</span>
+                      <strong className="text-blue-700 font-extrabold">Exclusivo (por km)</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Valor por km (faixa):</span>
+                      <strong className="text-vapt-dark font-mono">R$ {breakdown.ratePerKm?.toFixed(2)} / km</strong>
+                    </div>
+                    {!breakdown.isExactRoute && (
+                      <div className="flex justify-between text-[10px] text-gray-400">
+                        <span>Limites da Faixa ({breakdown.distance <= 50 ? '≤50km' : breakdown.distance <= 200 ? '50-200km' : '>200km'}):</span>
+                        <span>Min: R$ {breakdown.minPrice} | Max: R$ {breakdown.maxPrice}</span>
+                      </div>
+                    )}
+                  </>
+                )}
 
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Parcela Peso ({weightKg}kg * R$ 0,20):</span>
-                  <strong className="text-vapt-dark font-mono">
-                    R$ {breakdown.pesoCalculo?.toFixed(2)}
-                  </strong>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Combustível ({getDistanceAmount}km * R$ 1,95):</span>
-                  <strong className="text-vapt-dark font-mono">
-                    R$ {breakdown.combustivelCalculo?.toFixed(2)}
-                  </strong>
-                </div>
-
-                {freightType === 'shared' && (
-                  <div className="flex justify-between text-green-600 bg-green-50 p-2 rounded-lg border border-green-200">
+                {breakdown.isExactRoute && (
+                  <div className="flex justify-between text-indigo-600 bg-indigo-50 p-2 rounded-lg border border-indigo-200">
                     <span className="font-bold flex items-center gap-1">
-                      🎁 Desc. Frete Conjunto (-25%):
+                      📍 Preço Exato da Rota:
                     </span>
                     <strong className="font-mono">
-                      - R$ {breakdown.desconto?.toFixed(2)}
+                      Faixa R$ {exactPriceInfo?.min.toFixed(0)} - {exactPriceInfo?.max.toFixed(0)}
                     </strong>
                   </div>
                 )}
@@ -618,7 +727,7 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
                 <div className="flex justify-between items-center pt-2.5 border-t border-gray-200 mt-2 text-sm">
                   <span className="font-extrabold text-vapt-dark">Estimativa do Preço Final:</span>
                   <strong className="text-lg text-vapt font-extrabold font-mono" style={{ color: '#093B84' }}>
-                    R$ {calculatedPrice.toLocaleString('pt', { minimumFractionDigits: 2 })}
+                    R$ {calculatedPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </strong>
                 </div>
               </div>
@@ -643,6 +752,23 @@ export default function ClientDashboard({ userProfile, onLogout }: ClientDashboa
           </div>
         </div>
       </main>
+
+      {/* Real-time Negotiation Chat Panel */}
+      {activeChatOfferId && (() => {
+        const activeReq = shippingRequests.find(r => r.id === activeChatOfferId);
+        if (!activeReq) return null;
+        return (
+          <NegotiationChat
+            offerId={activeChatOfferId}
+            currentUserRole="client"
+            currentUserName={userProfile.name}
+            offerPrice={activeReq.price}
+            offerStart={activeReq.start}
+            offerEnd={activeReq.end}
+            onClose={() => setActiveChatOfferId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

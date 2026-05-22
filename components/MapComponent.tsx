@@ -35,7 +35,9 @@ export const cities: City[] = [
   { id: 'Balsas', name: 'Balsas', x: 50, y: 48, population: '100k hab.', description: 'Principal polo do agronegócio regional e sede central do Vapt' },
   { id: 'Riachão', name: 'Riachão', x: 35, y: 35, population: '20k hab.', description: 'Famoso polo turístico pelas cachoeiras e águas cristalinas' },
   { id: 'Carolina', name: 'Carolina', x: 18, y: 25, population: '24k hab.', description: 'Portal da Chapada das Mesas, fronteira com o Tocantins' },
-  { id: 'Tasso Fragoso', name: 'Tasso Fragoso', x: 68, y: 78, population: '15k hab.', description: 'Grande polo produtor de grãos e soja ao sul do planalto' }
+  { id: 'Tasso Fragoso', name: 'Tasso Fragoso', x: 68, y: 78, population: '15k hab.', description: 'Grande polo produtor de grãos e soja ao sul do planalto' },
+  { id: 'SaoRaimundo', name: 'São Raimundo das Mangabeiras', x: 72, y: 45, population: '35k hab.', description: 'Polo logístico regional de interligação ferroviária e rodoviária' },
+  { id: 'Imperatriz', name: 'Imperatriz', x: 12, y: 12, population: '260k hab.', description: 'Segunda maior cidade do estado, grande polo industrial, comercial e logístico' }
 ];
 
 export const regionalHighways = [
@@ -43,6 +45,8 @@ export const regionalHighways = [
   { from: 'Riachão', to: 'Carolina', distance: 100, label: 'BR-230' },
   { from: 'Balsas', to: 'Tasso Fragoso', distance: 155, label: 'MA-007 / MA-006' },
   { from: 'Carolina', to: 'Tasso Fragoso', distance: 340, label: 'Rota do Oeste' },
+  { from: 'Balsas', to: 'São Raimundo das Mangabeiras', distance: 100, label: 'BR-230 Leste' },
+  { from: 'Balsas', to: 'Imperatriz', distance: 380, label: 'BR-010 Norte' },
 ];
 
 export default function MapComponent({ selectedStartCity, selectedEndCity, onSelectRoute, filteredDriversCount }: MapComponentProps) {
@@ -93,6 +97,17 @@ export default function MapComponent({ selectedStartCity, selectedEndCity, onSel
       routeEnd: 'Balsas',
       progress: 82,
       color: '#8B5CF6',
+      coordinates: { x: 0, y: 0 }
+    },
+    {
+      id: 'drv-5',
+      name: 'Ana Costa',
+      vehicle: 'Carro de Passeio',
+      capacityLeft: 120,
+      routeStart: 'Carolina',
+      routeEnd: 'Riachão',
+      progress: 60,
+      color: '#EC4899',
       coordinates: { x: 0, y: 0 }
     }
   ]);
